@@ -1,0 +1,78 @@
+{
+  "total_clicks": 27,
+  "daily_clicks": 1,
+  "current_date": "2026-01-09",
+  "click_history": [
+    {
+      "timestamp": 1767812952.0636678,
+      "total_count": 18,
+      "daily_count": 8,
+      "session_id": "9f7d4134281730fb1e9553128310d58f",
+      "nickname": "Matt"
+    },
+    {
+      "timestamp": 1767812952.8051922,
+      "total_count": 19,
+      "daily_count": 9,
+      "session_id": "9f7d4134281730fb1e9553128310d58f",
+      "nickname": "Matt"
+    },
+    {
+      "timestamp": 1767812953.7261362,
+      "total_count": 20,
+      "daily_count": 10,
+      "session_id": "9f7d4134281730fb1e9553128310d58f",
+      "nickname": "Matt"
+    },
+    {
+      "timestamp": 1767812954.5232124,
+      "total_count": 21,
+      "daily_count": 11,
+      "session_id": "9f7d4134281730fb1e9553128310d58f",
+      "nickname": "Matt"
+    },
+    {
+      "timestamp": 1767812955.2788103,
+      "total_count": 22,
+      "daily_count": 12,
+      "session_id": "9f7d4134281730fb1e9553128310d58f",
+      "nickname": "Matt"
+    },
+    {
+      "timestamp": 1767812960.9504714,
+      "total_count": 23,
+      "daily_count": 13,
+      "session_id": "9f7d4134281730fb1e9553128310d58f",
+      "nickname": "Matt"
+    },
+    {
+      "timestamp": 1767812973.1775918,
+      "total_count": 24,
+      "daily_count": 14,
+      "session_id": "9f7d4134281730fb1e9553128310d58f",
+      "nickname": "Matt"
+    },
+    {
+      "timestamp": 1767925312.0320754,
+      "total_count": 25,
+      "daily_count": 1,
+      "session_id": "3bb5c878725816152805cfe37afc3a4c",
+      "nickname": "kiru_von"
+    },
+    {
+      "timestamp": 1767925501.3403943,
+      "total_count": 26,
+      "daily_count": 2,
+      "session_id": "fcbec07bdf0622e4871bb812479e0c30",
+      "nickname": "kiru_von"
+    },
+    {
+      "timestamp": 1767985245.8865328,
+      "total_count": 27,
+      "daily_count": 1,
+      "session_id": "11c74c2f887137548b4a5746e54624e3",
+      "nickname": "kiru_von"
+    }
+  ],
+  "last_updated": 1767985245.8865888
+}

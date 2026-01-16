@@ -1,0 +1,19 @@
+{
+  "messages": [
+    {
+      "message": "Hi~",
+      "timestamp": 1766883657.9481897
+    },
+    {
+      "message": "Test 2",
+      "timestamp": 1766883665.942792
+    },
+    {
+      "message": "Is there a char limit on this chat and i woonder if things will just get saved on Sams pc locally",
+      "timestamp": 1767811363.7432022,
+      "session_id": "5e2eda44c91e69ae9d7a0dd2b03d583d",
+      "nickname": "kiru_von",
+      "color": "\ud83d\udc9c"
+    }
+  ]
+}

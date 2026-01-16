@@ -1,0 +1,5 @@
+flask>=2.0.0
+pygame>=2.0.0
+python-osc>=1.8.0
+pyngrok>=7.0.0
+pyinstaller>=5.0.0

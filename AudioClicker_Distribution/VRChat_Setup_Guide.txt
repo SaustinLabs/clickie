@@ -1,0 +1,27 @@
+# VRChat OSC Setup Guide
+
+## Quick Setup:
+1. Run AudioClicker.exe
+2. In VRChat: Settings > OSC > Enable OSC
+3. Add these Bool parameters to your avatar:
+   - RemoteClick
+   - ClickTrigger  
+   - SpecialTrigger
+4. Add this Int parameter:
+   - ClickCount
+
+## Testing:
+- Visit http://localhost:5000/vrchat/test-osc to test OSC
+- Visit http://localhost:5000/vrchat/status to check connection
+
+## Avatar Animation Setup:
+1. In Unity, open your avatar's Animator Controller
+2. Create new Bool parameters: RemoteClick, ClickTrigger, SpecialTrigger
+3. Create new Int parameter: ClickCount
+4. Add transitions triggered by these parameters
+5. Create fun animations/effects that respond to remote clicks!
+
+## Common Issues:
+- Make sure VRChat OSC is enabled in settings
+- Check firewall isn't blocking port 9000/9001
+- Parameters must be added to BOTH Unity project AND uploaded avatar

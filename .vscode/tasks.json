@@ -1,0 +1,38 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run Flask Audio Clicker",
+			"type": "shell",
+			"command": "\"C:/Users/HOME/clicker/New folder/.venv/Scripts/python.exe\"",
+			"args": [
+				"app.py"
+			],
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Run Flask Audio Clicker (Fixed)",
+			"type": "shell",
+			"command": "& \"C:/Users/HOME/clicker/New folder/.venv/Scripts/python.exe\"",
+			"args": [
+				"app.py"
+			],
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "Run Flask Audio Clicker (PowerShell)",
+			"type": "shell",
+			"command": "& 'C:/Users/HOME/clicker/New folder/.venv/Scripts/python.exe'",
+			"args": [
+				"app.py"
+			],
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "build"
+		}
+	]
+}

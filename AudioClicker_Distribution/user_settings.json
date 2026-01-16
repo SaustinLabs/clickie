@@ -1,0 +1,19 @@
+{
+  "title": "Good Boy!",
+  "subtitle": "Remote Clicker Training \ud83c\udfaf",
+  "theme": "purple",
+  "timezones": [
+    {
+      "name": "Zac",
+      "offset": 11
+    },
+    {
+      "name": "Saus",
+      "offset": -5
+    },
+    {
+      "name": "Kiru",
+      "offset": 1
+    }
+  ]
+}
