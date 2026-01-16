@@ -1281,6 +1281,25 @@
             </div>
             
             <div class="form-group">
+                <label>Sound Preferences 🔊</label>
+                <div style="margin-bottom: 10px;">
+                    <label style="font-size: 0.9em; opacity: 0.8;">Click Sound</label>
+                    <select id="settingClickSound" onchange="previewSound('click')">
+                        <option value="">Loading sounds...</option>
+                    </select>
+                    <button type="button" class="btn btn-secondary" onclick="previewSound('click')" style="margin-top: 5px; padding: 5px 10px; font-size: 0.9em;">▶️ Preview</button>
+                </div>
+                <div>
+                    <label style="font-size: 0.9em; opacity: 0.8;">Bonk Sound</label>
+                    <select id="settingBonkSound" onchange="previewSound('bonk')">
+                        <option value="">Loading sounds...</option>
+                    </select>
+                    <button type="button" class="btn btn-secondary" onclick="previewSound('bonk')" style="margin-top: 5px; padding: 5px 10px; font-size: 0.9em;">▶️ Preview</button>
+                </div>
+                <small style="opacity: 0.7; display: block; margin-top: 8px;">Choose your personal click and bonk sounds!</small>
+            </div>
+            
+            <div class="form-group">
                 <label>World Clocks <small style="opacity: 0.7;">(for long distance relationships 💕)</small></label>
                 <div id="timezoneContainer" class="timezone-container">
                     <!-- Timezones will be added here dynamically -->
@@ -1317,6 +1336,22 @@
                     <button class="btn btn-primary" onclick="updateRateLimit()">Update</button>
                 </div>
                 <small style="opacity: 0.7;">Current: <span id="currentRateLimit">10</span> clicks per hour</small>
+            </div>
+            
+            <div class="form-group">
+                <label>Sound Library 🎵</label>
+                <div style="margin-bottom: 10px;">
+                    <label style="font-size: 0.9em; opacity: 0.8;">Library Size: <span id="librarySizeDisplay">0 MB</span> (<span id="libraryFileCount">0</span> files)</label>
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <input type="file" id="soundUploadInput" accept=".wav,.mp3,.ogg" style="margin-bottom: 5px;" />
+                    <button class="btn btn-primary" onclick="uploadSound()">📤 Upload Sound</button>
+                </div>
+                <div id="soundLibraryList" style="max-height: 200px; overflow-y: auto; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 10px;">
+                    <p style="opacity: 0.5;">Loading sound library...</p>
+                </div>
+                <button class="btn btn-secondary" onclick="refreshSoundLibrary()" style="margin-top: 10px;">🔄 Refresh</button>
+                <small style="opacity: 0.7; display: block; margin-top: 5px;">Supports WAV, MP3 (with ffmpeg), and OGG formats</small>
             </div>
             
             <div class="form-group">
@@ -1529,6 +1564,9 @@
                 addTimezoneField(tz.name, tz.offset);
             });
             
+            // Load sound options and preferences
+            loadSoundOptions();
+            
             document.getElementById('settingsModal').classList.add('show');
         }
         
@@ -1564,6 +1602,10 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(settings)
                 });
+                
+                // Save sound preferences
+                await saveSoundPreferences();
+                
                 applySettings();
                 updateClocks();
                 closeSettings();
@@ -1587,6 +1629,7 @@
         async function openAdmin() {
             document.getElementById('adminModal').classList.add('show');
             await loadAdminData();
+            await refreshSoundLibrary();
         }
         
         function closeAdmin() {
@@ -1713,6 +1756,182 @@
             } catch (error) {
                 console.error('Failed to assign sound:', error);
                 alert('❌ Failed to assign sound');
+            }
+        }
+        
+        // Sound Library Management Functions
+        async function refreshSoundLibrary() {
+            try {
+                const response = await fetch('/admin/sounds/library');
+                const data = await response.json();
+                
+                document.getElementById('librarySizeDisplay').textContent = data.total_size_mb + ' MB';
+                document.getElementById('libraryFileCount').textContent = data.file_count;
+                
+                const listDiv = document.getElementById('soundLibraryList');
+                if (data.files.length === 0) {
+                    listDiv.innerHTML = '<p style="opacity: 0.5;">No sounds in library yet. Upload some!</p>';
+                } else {
+                    listDiv.innerHTML = '';
+                    data.files.forEach(file => {
+                        const fileDiv = document.createElement('div');
+                        fileDiv.style.cssText = 'padding: 8px; background: rgba(255,255,255,0.05); border-radius: 8px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center;';
+                        fileDiv.innerHTML = `
+                            <span>🔊 ${file.filename} <small style="opacity: 0.7;">(${file.size_mb} MB)</small></span>
+                            <button class="btn btn-secondary" onclick="deleteSound('${file.filename}')" style="padding: 3px 8px; font-size: 0.8em; background: #e74c3c;">🗑️</button>
+                        `;
+                        listDiv.appendChild(fileDiv);
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to refresh sound library:', error);
+            }
+        }
+        
+        async function uploadSound() {
+            const input = document.getElementById('soundUploadInput');
+            if (!input.files || input.files.length === 0) {
+                alert('Please select a sound file first!');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('sound', input.files[0]);
+            
+            try {
+                const response = await fetch('/admin/sounds/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    alert('✅ Sound uploaded: ' + data.filename);
+                    input.value = ''; // Clear the input
+                    refreshSoundLibrary();
+                    loadSoundOptions(); // Refresh sound dropdowns
+                } else {
+                    alert('❌ Failed to upload: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Failed to upload sound:', error);
+                alert('❌ Failed to upload sound');
+            }
+        }
+        
+        async function deleteSound(filename) {
+            if (!confirm(`Delete ${filename}?`)) return;
+            
+            try {
+                const response = await fetch(`/admin/sounds/delete/${encodeURIComponent(filename)}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    alert('✅ Deleted: ' + filename);
+                    refreshSoundLibrary();
+                    loadSoundOptions(); // Refresh sound dropdowns
+                } else {
+                    alert('❌ Failed to delete: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Failed to delete sound:', error);
+                alert('❌ Failed to delete sound');
+            }
+        }
+        
+        // User Sound Preferences Functions
+        async function loadSoundOptions() {
+            try {
+                const response = await fetch('/admin/sounds');
+                const data = await response.json();
+                
+                // Update both click and bonk sound dropdowns
+                const clickSelect = document.getElementById('settingClickSound');
+                const bonkSelect = document.getElementById('settingBonkSound');
+                
+                // Clear existing options
+                clickSelect.innerHTML = '<option value="">Default</option>';
+                bonkSelect.innerHTML = '<option value="">Default</option>';
+                
+                // Add sound options
+                data.sounds.forEach(sound => {
+                    const clickOption = document.createElement('option');
+                    clickOption.value = sound.filename;
+                    clickOption.textContent = sound.filename;
+                    clickSelect.appendChild(clickOption);
+                    
+                    const bonkOption = document.createElement('option');
+                    bonkOption.value = sound.filename;
+                    bonkOption.textContent = sound.filename;
+                    bonkSelect.appendChild(bonkOption);
+                });
+                
+                // Load user's current preferences
+                const prefResponse = await fetch('/user/sound-preferences');
+                const prefData = await prefResponse.json();
+                
+                // Extract just the filename from the full path
+                const clickFilename = prefData.click_sound ? prefData.click_sound.split('/').pop() : '';
+                const bonkFilename = prefData.bonk_sound ? prefData.bonk_sound.split('/').pop() : '';
+                
+                clickSelect.value = clickFilename || '';
+                bonkSelect.value = bonkFilename || '';
+            } catch (error) {
+                console.error('Failed to load sound options:', error);
+            }
+        }
+        
+        async function saveSoundPreferences() {
+            const clickSound = document.getElementById('settingClickSound').value;
+            const bonkSound = document.getElementById('settingBonkSound').value;
+            
+            try {
+                const response = await fetch('/user/sound-preferences', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        click_sound: clickSound || null,
+                        bonk_sound: bonkSound || null
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    console.log('✅ Sound preferences saved');
+                } else {
+                    console.error('❌ Failed to save sound preferences:', data.error);
+                }
+            } catch (error) {
+                console.error('Failed to save sound preferences:', error);
+            }
+        }
+        
+        async function previewSound(type) {
+            const select = type === 'click' ? document.getElementById('settingClickSound') : document.getElementById('settingBonkSound');
+            const filename = select.value;
+            
+            if (!filename) {
+                alert('Please select a sound first!');
+                return;
+            }
+            
+            // Find the sound path
+            try {
+                const response = await fetch('/admin/sounds');
+                const data = await response.json();
+                const sound = data.sounds.find(s => s.filename === filename);
+                
+                if (sound) {
+                    const audio = new Audio(sound.path);
+                    audio.play().catch(err => {
+                        console.error('Failed to play preview:', err);
+                        alert('Could not preview sound');
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to preview sound:', error);
             }
         }
         

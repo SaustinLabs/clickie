@@ -49,6 +49,8 @@ CHAT_FILE = "chat_messages.json"  # Chat messages storage
 SESSIONS_FILE = "user_sessions.json"  # Session-to-nickname mapping
 RATE_LIMITS_FILE = "rate_limits.json"  # Rate limiting data
 PISHOCK_CONFIG_FILE = "pishock_config.json"  # PiShock API configuration
+CUSTOM_SOUNDS_DIR = "static/custom_sounds"  # Directory for custom sound library
+USER_PREFERENCES_FILE = "user_preferences.json"  # Per-user sound preferences
 
 # Rate limiting configuration
 MAX_CLICKS_PER_HOUR = 10  # Default: 10 clicks per hour
@@ -177,18 +179,32 @@ class AudioClicker:
                 self.current_date = str(date.today())
                 print("📅 New day! Daily click count reset.")
             
+            # Determine which sound type to play (click or bonk)
+            actual_sound_type = 'bonk' if sound_type == 'bonk' else 'click'
+            
             # Get custom sound for this user or use default
-            sound_file = get_custom_sound_for_user(session_id) if session_id else SOUND_FILE
+            sound_file = get_custom_sound_for_user(session_id, actual_sound_type) if session_id else (BONK_SOUND_FILE if actual_sound_type == 'bonk' else SOUND_FILE)
             
             if os.path.exists(sound_file):
-                # Play custom sound file
-                pygame.mixer.Sound(sound_file).play()
-                print(f"🎵 Playing custom sound: {sound_file}")
+                # Play sound file with MP3 support
+                if play_sound_file(sound_file):
+                    print(f"🎵 Playing {actual_sound_type} sound: {sound_file}")
+                else:
+                    # Fallback to system beep
+                    try:
+                        import winsound
+                        winsound.Beep(800, 200)
+                        print("🔊 Fallback to system beep")
+                    except:
+                        print("\a")  # ASCII bell
             else:
                 # Fall back to system beep
-                import winsound
-                winsound.Beep(800, 200)  # frequency, duration
-                print("🔊 Playing system beep")
+                try:
+                    import winsound
+                    winsound.Beep(800, 200)  # frequency, duration
+                    print("🔊 Playing system beep")
+                except:
+                    print("\a")  # ASCII bell
             
             # Update counts
             self.click_count += 1
@@ -372,29 +388,137 @@ def record_click_for_rate_limit(session_id):
     limits[session_id]['clicks'].append(current_time)
     save_rate_limits(limits)
 
-def get_custom_sound_for_user(session_id):
-    """Get custom sound file for a specific user"""
-    sessions = load_sessions()
-    user_data = sessions.get(session_id, {})
-    custom_sound = user_data.get('custom_sound', None)
+def get_custom_sound_for_user(session_id, sound_type='click'):
+    """Get custom sound file for a specific user and sound type"""
+    preferences = load_user_preferences()
+    user_prefs = preferences.get(session_id, {})
+    
+    # Get preference for this sound type (click or bonk)
+    custom_sound = user_prefs.get(f'{sound_type}_sound', None)
     
     if custom_sound and os.path.exists(custom_sound):
         return custom_sound
-    return SOUND_FILE
+    
+    # Fall back to default based on sound type
+    return BONK_SOUND_FILE if sound_type == 'bonk' else SOUND_FILE
 
-def set_custom_sound_for_user(session_id, sound_filename):
-    """Set custom sound file for a specific user"""
-    sessions = load_sessions()
+def set_custom_sound_for_user(session_id, sound_filename, sound_type='click'):
+    """Set custom sound file for a specific user and sound type"""
+    # Check in both static/sounds and static/custom_sounds
+    possible_paths = [
+        f"static/sounds/{sound_filename}",
+        f"{CUSTOM_SOUNDS_DIR}/{sound_filename}"
+    ]
     
-    if session_id not in sessions:
-        return False
+    sound_path = None
+    for path in possible_paths:
+        if os.path.exists(path):
+            sound_path = path
+            break
     
-    sound_path = f"static/sounds/{sound_filename}"
-    if os.path.exists(sound_path):
-        sessions[session_id]['custom_sound'] = sound_path
-        save_sessions(sessions)
+    if sound_path:
+        preferences = load_user_preferences()
+        if session_id not in preferences:
+            preferences[session_id] = {}
+        
+        preferences[session_id][f'{sound_type}_sound'] = sound_path
+        save_user_preferences(preferences)
         return True
     return False
+
+def load_user_preferences():
+    """Load user sound preferences"""
+    try:
+        if os.path.exists(USER_PREFERENCES_FILE):
+            with open(USER_PREFERENCES_FILE, 'r') as f:
+                return json.load(f)
+        return {}
+    except Exception as e:
+        print(f"⚠️ Could not load user preferences: {e}")
+        return {}
+
+def save_user_preferences(preferences):
+    """Save user sound preferences"""
+    try:
+        with open(USER_PREFERENCES_FILE, 'w') as f:
+            json.dump(preferences, f, indent=2)
+    except Exception as e:
+        print(f"⚠️ Could not save user preferences: {e}")
+
+def get_sound_library_info():
+    """Get information about the custom sound library"""
+    os.makedirs(CUSTOM_SOUNDS_DIR, exist_ok=True)
+    os.makedirs("static/sounds", exist_ok=True)
+    
+    total_size = 0
+    sound_files = []
+    
+    # Scan both directories
+    for directory in [CUSTOM_SOUNDS_DIR, "static/sounds"]:
+        if os.path.exists(directory):
+            for filename in os.listdir(directory):
+                if filename.endswith(('.wav', '.mp3', '.ogg')):
+                    filepath = os.path.join(directory, filename)
+                    file_size = os.path.getsize(filepath)
+                    total_size += file_size
+                    sound_files.append({
+                        'filename': filename,
+                        'path': filepath,
+                        'size': file_size,
+                        'size_mb': round(file_size / (1024 * 1024), 2)
+                    })
+    
+    return {
+        'total_size': total_size,
+        'total_size_mb': round(total_size / (1024 * 1024), 2),
+        'file_count': len(sound_files),
+        'files': sound_files
+    }
+
+def convert_mp3_to_wav(mp3_path):
+    """Convert MP3 to WAV format using ffmpeg"""
+    wav_path = mp3_path.rsplit('.', 1)[0] + '_converted.wav'
+    
+    try:
+        print(f"🔄 Converting MP3 to WAV: {mp3_path}")
+        result = subprocess.run(
+            ['ffmpeg', '-i', mp3_path, '-acodec', 'pcm_s16le', '-ar', '44100', '-ac', '2', '-y', wav_path],
+            capture_output=True,
+            timeout=30
+        )
+        if result.returncode == 0 and os.path.exists(wav_path):
+            print(f"✅ Converted to WAV: {wav_path}")
+            return wav_path
+        else:
+            print(f"⚠️ ffmpeg conversion failed: {result.stderr.decode()}")
+    except FileNotFoundError:
+        print("⚠️ ffmpeg not found - MP3 conversion requires ffmpeg")
+    except Exception as e:
+        print(f"⚠️ MP3 conversion error: {e}")
+    
+    return None
+
+def play_sound_file(sound_path):
+    """Play a sound file with MP3 support and fallback to WAV conversion"""
+    try:
+        # If MP3, try to convert to WAV first for better compatibility
+        if sound_path.endswith('.mp3'):
+            wav_path = convert_mp3_to_wav(sound_path)
+            if wav_path:
+                sound_path = wav_path
+        
+        # Try pygame Sound first (best for WAV)
+        if sound_path.endswith('.wav'):
+            pygame.mixer.Sound(sound_path).play()
+            return True
+        
+        # Try pygame music for other formats
+        pygame.mixer.music.load(sound_path)
+        pygame.mixer.music.play()
+        return True
+    except Exception as e:
+        print(f"⚠️ Sound playback failed for {sound_path}: {e}")
+        return False
 
 def get_voice_message_path():
     """Find the voice message file regardless of extension"""
@@ -1049,20 +1173,117 @@ def list_sounds():
     
     # Create sounds directory if it doesn't exist
     os.makedirs(sounds_dir, exist_ok=True)
+    os.makedirs(CUSTOM_SOUNDS_DIR, exist_ok=True)
     
     sound_files = []
-    if os.path.exists(sounds_dir):
-        for filename in os.listdir(sounds_dir):
-            if filename.endswith(('.wav', '.mp3', '.ogg')):
-                sound_files.append({
-                    'filename': filename,
-                    'path': f"{sounds_dir}/{filename}"
-                })
+    # Scan both directories
+    for directory in [sounds_dir, CUSTOM_SOUNDS_DIR]:
+        if os.path.exists(directory):
+            for filename in os.listdir(directory):
+                if filename.endswith(('.wav', '.mp3', '.ogg')):
+                    filepath = os.path.join(directory, filename)
+                    sound_files.append({
+                        'filename': filename,
+                        'path': filepath,
+                        'size': os.path.getsize(filepath)
+                    })
     
     return jsonify({
         'sounds': sound_files,
-        'default_sound': SOUND_FILE
+        'default_sound': SOUND_FILE,
+        'default_bonk_sound': BONK_SOUND_FILE
     })
+
+@app.route('/admin/sounds/library', methods=['GET'])
+def get_sound_library():
+    """Get sound library information with size monitoring"""
+    return jsonify(get_sound_library_info())
+
+@app.route('/admin/sounds/upload', methods=['POST'])
+def upload_custom_sound():
+    """Upload a custom sound to the library"""
+    try:
+        if 'sound' not in request.files:
+            return jsonify({'success': False, 'error': 'No sound file provided'})
+        
+        sound_file = request.files['sound']
+        filename = sound_file.filename
+        
+        if not filename:
+            return jsonify({'success': False, 'error': 'No filename'})
+        
+        # Validate file extension
+        if not filename.endswith(('.wav', '.mp3', '.ogg')):
+            return jsonify({'success': False, 'error': 'Invalid file type. Use WAV, MP3, or OGG'})
+        
+        # Ensure custom sounds directory exists
+        os.makedirs(CUSTOM_SOUNDS_DIR, exist_ok=True)
+        
+        # Save the file
+        save_path = os.path.join(CUSTOM_SOUNDS_DIR, filename)
+        sound_file.save(save_path)
+        
+        file_size = os.path.getsize(save_path)
+        print(f"✅ Sound uploaded: {filename} ({file_size} bytes)")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Sound uploaded successfully!',
+            'filename': filename,
+            'size': file_size
+        })
+    except Exception as e:
+        print(f"❌ Sound upload failed: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/admin/sounds/delete/<path:filename>', methods=['DELETE'])
+def delete_custom_sound(filename):
+    """Delete a custom sound from the library"""
+    try:
+        # Check both directories
+        for directory in [CUSTOM_SOUNDS_DIR, "static/sounds"]:
+            filepath = os.path.join(directory, filename)
+            if os.path.exists(filepath):
+                os.remove(filepath)
+                print(f"🗑️ Deleted sound: {filename}")
+                return jsonify({'success': True, 'message': f'Deleted {filename}'})
+        
+        return jsonify({'success': False, 'error': 'Sound file not found'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/user/sound-preferences', methods=['GET', 'POST'])
+def manage_sound_preferences():
+    """Get or set user sound preferences"""
+    session_id = get_or_create_session_id()
+    
+    if request.method == 'POST':
+        try:
+            data = request.json
+            click_sound = data.get('click_sound')
+            bonk_sound = data.get('bonk_sound')
+            
+            if click_sound:
+                set_custom_sound_for_user(session_id, click_sound, 'click')
+            
+            if bonk_sound:
+                set_custom_sound_for_user(session_id, bonk_sound, 'bonk')
+            
+            return jsonify({
+                'success': True,
+                'message': 'Sound preferences updated!'
+            })
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)})
+    else:
+        # GET - return current preferences
+        preferences = load_user_preferences()
+        user_prefs = preferences.get(session_id, {})
+        
+        return jsonify({
+            'click_sound': user_prefs.get('click_sound', SOUND_FILE),
+            'bonk_sound': user_prefs.get('bonk_sound', BONK_SOUND_FILE)
+        })
 
 @app.route('/admin/rate-limit', methods=['GET', 'POST'])
 def manage_rate_limit():

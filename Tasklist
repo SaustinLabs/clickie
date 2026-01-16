@@ -1,0 +1,25 @@
+## Revised Plan Based on Your Feedback
+
+### 1. Sound Format Support
+
+- __Decision:__ Keep WAV as primary format for mobile compatibility
+- __Add:__ Optional MP3 support with fallback to WAV conversion if needed
+- __Implementation:__ Use pygame's built-in WAV support as primary, add ffmpeg fallback for MP3
+
+### 2. Storage Management
+
+- __Implementation:__ Indefinite storage with folder size monitoring
+- __UI Addition:__ Show sound library size in the admin interface
+- __Cleanup:__ Add manual cleanup button for admin
+
+### 3. User-Specific Sound Preferences
+
+- __Implementation:__ Per-user sound preferences system
+
+- __Storage:__ JSON-based user preferences with username/nickname mapping
+
+- __Features:__
+
+  - Each user can select their preferred "click" and "bonk" sounds
+  - Sound preferences persist across sessions
+  - Admin can manage user preferences
