@@ -96,7 +96,6 @@ curl http://localhost:5000/vrchat/status
 - Send them your computer's IP: `http://YOUR_IP:5000`
 - They click the big button on the web page
 - Audio plays AND your VRChat avatar reacts instantly!
-- **No ngrok warning page** - direct access when using public tunnels!
 
 ### Option 2: Direct API Calls
 Friends can trigger effects programmatically:
